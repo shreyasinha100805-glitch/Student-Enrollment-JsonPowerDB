@@ -7,7 +7,7 @@
 var TOKEN    = "90935188|-31949239798991463|90958760";
 var DB_NAME  = "SCHOOL-DB";
 var REL_NAME = "STUDENT-TABLE";
-var BASE_URL = "http://api.login2explore.com:5577";
+var BASE_URL = "https://api.login2explore.com:5577";
 var IML      = "/api/iml";
 var IRL      = "/api/irl";
 
