@@ -1,6 +1,6 @@
 📌 Title of the Project
 
-Student Enrollment Form using JsonPowerDB (JPDB)
+   Student Enrollment Form using JsonPowerDB (JPDB)
 
 📖 Description
 A web-based Student Enrollment Form built with HTML, Bootstrap, jQuery, and JsonPowerDB as the backend database.
