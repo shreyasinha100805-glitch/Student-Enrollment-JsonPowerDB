@@ -1,19 +1,76 @@
-* ══════════════════════════════════════════════
-   jpdb-config.js - Final Working Version
-   Uses login2explore official commons library
+/* ══════════════════════════════════════════════
+   jpdb-config.js
+   JsonPowerDB Configuration & All API Functions
    ══════════════════════════════════════════════ */
- 
-var TOKEN    = "90935188|-31949239798991463|90958760";
+
+/* ── CONFIG ── */
+var TOKEN    = "90935188|-31949239798991463|90958760"; // ← replace with your token
 var DB_NAME  = "SCHOOL-DB";
 var REL_NAME = "STUDENT-TABLE";
 var BASE_URL = "http://api.login2explore.com:5577";
 var IML      = "/api/iml";
 var IRL      = "/api/irl";
- 
+
 var currentRecNo = null;
- 
+
 /* ══════════════════════════════════════════════
-   GET FORM VALUES
+   CORE — sends request to JPDB
+   ══════════════════════════════════════════════ */
+function executeCommand(reqObj, endpoint) {
+    var result;
+    $.ajax({
+        url   : BASE_URL + endpoint,
+        type  : "POST",
+        data  : JSON.stringify(reqObj),
+        async : false,
+        success: function(res) {
+            result = (typeof res === "string") ? JSON.parse(res) : res;
+        },
+        error: function(xhr) {
+            try   { result = JSON.parse(xhr.responseText); }
+            catch (e) { result = { status: xhr.status, message: xhr.statusText }; }
+        }
+    });
+    return result;
+}
+
+/* ══════════════════════════════════════════════
+   BUILD REQUEST OBJECTS
+   ══════════════════════════════════════════════ */
+
+function buildPUT(dataObj) {
+    return {
+        token  : TOKEN,
+        cmd    : "PUT",
+        dbName : DB_NAME,
+        rel    : REL_NAME,
+        jsonStr: dataObj        // plain object — NOT stringified
+    };
+}
+
+function buildGET(keyObj) {
+    return {
+        token  : TOKEN,
+        cmd    : "GET_BY_KEY",
+        dbName : DB_NAME,
+        rel    : REL_NAME,
+        jsonStr: keyObj
+    };
+}
+
+function buildUPDATE(dataObj, recNo) {
+    return {
+        token  : TOKEN,
+        cmd    : "UPDATE",
+        dbName : DB_NAME,
+        rel    : REL_NAME,
+        recNo  : recNo,
+        jsonStr: dataObj
+    };
+}
+
+/* ══════════════════════════════════════════════
+   GET FORM VALUES AS PLAIN OBJECT
    ══════════════════════════════════════════════ */
 function getFormObj() {
     return {
@@ -25,9 +82,9 @@ function getFormObj() {
         enrollmentDate : $("#enrollmentDate").val()
     };
 }
- 
+
 /* ══════════════════════════════════════════════
-   FILL FORM FROM RECORD
+   FILL FORM FROM RECORD OBJECT
    ══════════════════════════════════════════════ */
 function fillForm(rec) {
     $("#fullName").val(rec.fullName             || "");
@@ -36,7 +93,7 @@ function fillForm(rec) {
     $("#address").val(rec.address               || "");
     $("#enrollmentDate").val(rec.enrollmentDate || "");
 }
- 
+
 /* ══════════════════════════════════════════════
    VALIDATION
    ══════════════════════════════════════════════ */
@@ -58,7 +115,7 @@ function validate() {
     }
     return true;
 }
- 
+
 /* ══════════════════════════════════════════════
    UI HELPERS
    ══════════════════════════════════════════════ */
@@ -68,7 +125,7 @@ function showMsg(msg, type) {
         + msg + '</div>'
     );
 }
- 
+
 function setButtons(state) {
     if (state === "found") {
         $("#saveBtn").prop("disabled", true);
@@ -80,66 +137,51 @@ function setButtons(state) {
         $("#rollNo").prop("disabled", false);
     }
 }
- 
+
 /* ══════════════════════════════════════════════
    SAVE
    ══════════════════════════════════════════════ */
 function saveStudent() {
     if (!validate()) return;
- 
-    showMsg("&#9203; Saving...", "info");
- 
-    var data   = getFormObj();
-    var putReq = createPUTRequest(TOKEN, JSON.stringify(data), DB_NAME, REL_NAME);
- 
-    $.ajaxSetup({ async: false });
-    var result = executeCommandAtGivenBaseUrl(putReq, BASE_URL, IML);
-    $.ajaxSetup({ async: true });
- 
+
+    var result = executeCommand(buildPUT(getFormObj()), IML);
     console.log("SAVE:", result);
- 
+
     if (result && result.status === 200) {
         try {
             var d = (typeof result.data === "string") ? JSON.parse(result.data) : result.data;
             currentRecNo = Array.isArray(d.rec_no) ? d.rec_no[0] : d.rec_no;
         } catch(e) { currentRecNo = null; }
- 
-        showMsg("&#10004; Student saved successfully! Rec No: " + currentRecNo, "success");
+
+        showMsg("&#10004; Student saved successfully! (Rec No: " + currentRecNo + ")", "success");
         setButtons("found");
     } else {
         showMsg("&#10008; Save failed: " + ((result && result.message) || JSON.stringify(result)), "danger");
     }
 }
- 
+
 /* ══════════════════════════════════════════════
    SEARCH
    ══════════════════════════════════════════════ */
 function searchStudent() {
     var roll = $("#rollNo").val().trim();
     if (!roll) { alert("Enter Roll No to search!"); $("#rollNo").focus(); return; }
- 
-    showMsg("&#9203; Searching...", "info");
- 
-    var getReq = createGET_BY_KEYRequest(TOKEN, DB_NAME, REL_NAME, JSON.stringify({ rollNo: roll }));
- 
-    $.ajaxSetup({ async: false });
-    var result = executeCommandAtGivenBaseUrl(getReq, BASE_URL, IRL);
-    $.ajaxSetup({ async: true });
- 
+
+    var result = executeCommand(buildGET({ rollNo: roll }), IRL);
     console.log("SEARCH:", result);
- 
+
     if (!result || result.status !== 200) {
         showMsg("&#10008; No record found for Roll No: <b>" + roll + "</b>", "danger");
         currentRecNo = null;
         setButtons("empty");
         return;
     }
- 
+
     try {
         var d   = (typeof result.data === "string") ? JSON.parse(result.data) : result.data;
         var rec = d.record || d;
         currentRecNo = d.rec_no || null;
- 
+
         fillForm(rec);
         setButtons("found");
         showMsg("&#10004; Record found! You can now update.", "success");
@@ -147,32 +189,24 @@ function searchStudent() {
         showMsg("&#10008; Parse error: " + e.message, "danger");
     }
 }
- 
+
 /* ══════════════════════════════════════════════
    UPDATE
    ══════════════════════════════════════════════ */
 function updateStudent() {
     if (!validate()) return;
     if (!currentRecNo) { alert("Please Search first, then update."); return; }
- 
-    showMsg("&#9203; Updating...", "info");
- 
-    var data      = getFormObj();
-    var updateReq = createUPDATERecordRequest(TOKEN, JSON.stringify(data), DB_NAME, REL_NAME, currentRecNo);
- 
-    $.ajaxSetup({ async: false });
-    var result = executeCommandAtGivenBaseUrl(updateReq, BASE_URL, IML);
-    $.ajaxSetup({ async: true });
- 
+
+    var result = executeCommand(buildUPDATE(getFormObj(), currentRecNo), IML);
     console.log("UPDATE:", result);
- 
+
     if (result && result.status === 200) {
         showMsg("&#10004; Student updated successfully!", "success");
     } else {
         showMsg("&#10008; Update failed: " + ((result && result.message) || JSON.stringify(result)), "danger");
     }
 }
- 
+
 /* ══════════════════════════════════════════════
    RESET
    ══════════════════════════════════════════════ */
@@ -182,4 +216,3 @@ function resetForm() {
     currentRecNo = null;
     setButtons("empty");
 }
- 
