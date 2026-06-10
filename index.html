@@ -4,14 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Student Enrollment Form - JPDB</title>
-
+ 
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-
-    <!-- External JS file with all JPDB logic -->
+ 
+    <!-- Official JPDB Library (handles CORS via JSONP internally) -->
+    <script src="https://login2explore.com/jpdb/resources/js/0.0.3/jpdb-commons.js"></script>
+ 
+    <!-- Our config and logic -->
     <script src="jpdb-config.js"></script>
-
+ 
     <style>
         body { background: #f0f2f5; padding: 40px 0; }
         .panel {
@@ -32,50 +35,50 @@
     </style>
 </head>
 <body>
-
+ 
 <div class="container">
     <div class="panel panel-primary">
         <div class="panel-heading">
             <h3 class="panel-title">&#127979; Student Enrollment Form</h3>
         </div>
         <div class="panel-body">
-
+ 
             <form id="studentForm" autocomplete="off">
-
+ 
                 <div class="form-group">
                     <label class="required">Roll No</label>
                     <input type="text" id="rollNo" class="form-control"
-                           placeholder="Enter Roll No (e.g. S101)">
+                           placeholder="Enter Roll No (e.g. S301)">
                 </div>
-
+ 
                 <div class="form-group">
                     <label class="required">Full Name</label>
                     <input type="text" id="fullName" class="form-control"
                            placeholder="Enter Full Name">
                 </div>
-
+ 
                 <div class="form-group">
                     <label class="required">Class</label>
                     <input type="text" id="studentClass" class="form-control"
                            placeholder="e.g. 10th-A">
                 </div>
-
+ 
                 <div class="form-group">
                     <label class="required">Birth Date</label>
                     <input type="date" id="birthDate" class="form-control">
                 </div>
-
+ 
                 <div class="form-group">
                     <label class="required">Address</label>
                     <textarea id="address" class="form-control" rows="3"
                               placeholder="Enter full address"></textarea>
                 </div>
-
+ 
                 <div class="form-group">
                     <label class="required">Enrollment Date</label>
                     <input type="date" id="enrollmentDate" class="form-control">
                 </div>
-
+ 
                 <div style="margin-top:18px;">
                     <button type="button" class="btn btn-success" id="saveBtn"
                             onclick="saveStudent()">&#128190; Save</button>
@@ -86,20 +89,25 @@
                     <button type="button" class="btn btn-default"
                             onclick="resetForm()">&#8635; Reset</button>
                 </div>
-
+ 
             </form>
-
+ 
             <div id="message"></div>
-
+ 
         </div>
     </div>
 </div>
-
+ 
 <script>
     $(document).ready(function () {
         setButtons("empty");
+        // Check library loaded
+        if (typeof createPUTRequest === "undefined") {
+            showMsg("&#9888; JPDB library failed to load. Check internet connection.", "warning");
+        }
     });
 </script>
-
+ 
 </body>
 </html>
+ 
