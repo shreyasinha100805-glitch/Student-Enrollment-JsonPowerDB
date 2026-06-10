@@ -1,9 +1,10 @@
 /* ══════════════════════════════════════════════
    jpdb-config.js
    JsonPowerDB Configuration & All API Functions
+   Works on both localhost AND GitHub Pages
    ══════════════════════════════════════════════ */
 
-/* ── CONFIG ── */
+/* ── CONFIG ─────────────────────────────────── */
 var TOKEN    = "90935188|-31949239798991463|90958760";
 var DB_NAME  = "SCHOOL-DB";
 var REL_NAME = "STUDENT-TABLE";
@@ -14,7 +15,7 @@ var IRL      = "/api/irl";
 var currentRecNo = null;
 
 /* ══════════════════════════════════════════════
-   CORE — uses JSONP to bypass CORS
+   CORE — JSONP call (bypasses CORS on GitHub Pages)
    ══════════════════════════════════════════════ */
 function executeCommand(reqObj, endpoint) {
     var result = null;
@@ -23,16 +24,14 @@ function executeCommand(reqObj, endpoint) {
         url      : BASE_URL + endpoint,
         type     : "POST",
         data     : JSON.stringify(reqObj),
+        dataType : "jsonp",        // JSONP bypasses CORS
         async    : false,
-        dataType : "jsonp",           // ← JSONP bypasses CORS block
-        success  : function(res) {
+        success  : function (res) {
             result = res;
         },
-        error    : function(xhr, status, err) {
+        error    : function (xhr, status, err) {
             try   { result = JSON.parse(xhr.responseText); }
-            catch (e) {
-                result = { status: 0, message: "Network error: " + err };
-            }
+            catch (e) { result = { status: 0, message: "Error: " + err }; }
         }
     });
     return result;
@@ -40,6 +39,7 @@ function executeCommand(reqObj, endpoint) {
 
 /* ══════════════════════════════════════════════
    BUILD REQUEST OBJECTS
+   jsonStr must be a plain object — NOT a string
    ══════════════════════════════════════════════ */
 function buildPUT(dataObj) {
     return {
@@ -87,7 +87,7 @@ function getFormObj() {
 }
 
 /* ══════════════════════════════════════════════
-   FILL FORM FROM RECORD OBJECT
+   FILL FORM FROM RECORD
    ══════════════════════════════════════════════ */
 function fillForm(rec) {
     $("#fullName").val(rec.fullName             || "");
@@ -147,7 +147,7 @@ function setButtons(state) {
 function saveStudent() {
     if (!validate()) return;
 
-    showMsg("Saving...", "info");
+    showMsg("&#9203; Saving...", "info");
 
     var result = executeCommand(buildPUT(getFormObj()), IML);
     console.log("SAVE:", result);
@@ -156,9 +156,9 @@ function saveStudent() {
         try {
             var d = (typeof result.data === "string") ? JSON.parse(result.data) : result.data;
             currentRecNo = Array.isArray(d.rec_no) ? d.rec_no[0] : d.rec_no;
-        } catch(e) { currentRecNo = null; }
+        } catch (e) { currentRecNo = null; }
 
-        showMsg("&#10004; Student saved successfully! (Rec No: " + currentRecNo + ")", "success");
+        showMsg("&#10004; Student saved successfully! Rec No: " + currentRecNo, "success");
         setButtons("found");
     } else {
         var msg = (result && result.message) ? result.message : JSON.stringify(result);
@@ -173,14 +173,14 @@ function searchStudent() {
     var roll = $("#rollNo").val().trim();
     if (!roll) { alert("Enter Roll No to search!"); $("#rollNo").focus(); return; }
 
-    showMsg("Searching...", "info");
+    showMsg("&#9203; Searching...", "info");
 
     var result = executeCommand(buildGET({ rollNo: roll }), IRL);
     console.log("SEARCH:", result);
 
     if (!result || result.status !== 200) {
         var msg = (result && result.message) ? result.message : "Not found";
-        showMsg("&#10008; No record found for Roll No: <b>" + roll + "</b>. " + msg, "danger");
+        showMsg("&#10008; No record found for Roll No: <b>" + roll + "</b>", "danger");
         currentRecNo = null;
         setButtons("empty");
         return;
@@ -194,7 +194,7 @@ function searchStudent() {
         fillForm(rec);
         setButtons("found");
         showMsg("&#10004; Record found! You can now update.", "success");
-    } catch(e) {
+    } catch (e) {
         showMsg("&#10008; Parse error: " + e.message, "danger");
     }
 }
@@ -206,7 +206,7 @@ function updateStudent() {
     if (!validate()) return;
     if (!currentRecNo) { alert("Please Search first, then update."); return; }
 
-    showMsg("Updating...", "info");
+    showMsg("&#9203; Updating...", "info");
 
     var result = executeCommand(buildUPDATE(getFormObj(), currentRecNo), IML);
     console.log("UPDATE:", result);
