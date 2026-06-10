@@ -7,28 +7,32 @@
 var TOKEN    = "90935188|-31949239798991463|90958760";
 var DB_NAME  = "SCHOOL-DB";
 var REL_NAME = "STUDENT-TABLE";
-var BASE_URL = "https://api.login2explore.com:5577";
+var BASE_URL = "http://api.login2explore.com:5577";
 var IML      = "/api/iml";
 var IRL      = "/api/irl";
 
 var currentRecNo = null;
 
 /* ══════════════════════════════════════════════
-   CORE — sends request to JPDB
+   CORE — uses JSONP to bypass CORS
    ══════════════════════════════════════════════ */
 function executeCommand(reqObj, endpoint) {
-    var result;
+    var result = null;
+
     $.ajax({
-        url   : BASE_URL + endpoint,
-        type  : "POST",
-        data  : JSON.stringify(reqObj),
-        async : false,
-        success: function(res) {
-            result = (typeof res === "string") ? JSON.parse(res) : res;
+        url      : BASE_URL + endpoint,
+        type     : "POST",
+        data     : JSON.stringify(reqObj),
+        async    : false,
+        dataType : "jsonp",           // ← JSONP bypasses CORS block
+        success  : function(res) {
+            result = res;
         },
-        error: function(xhr) {
+        error    : function(xhr, status, err) {
             try   { result = JSON.parse(xhr.responseText); }
-            catch (e) { result = { status: xhr.status, message: xhr.statusText }; }
+            catch (e) {
+                result = { status: 0, message: "Network error: " + err };
+            }
         }
     });
     return result;
@@ -37,14 +41,13 @@ function executeCommand(reqObj, endpoint) {
 /* ══════════════════════════════════════════════
    BUILD REQUEST OBJECTS
    ══════════════════════════════════════════════ */
-
 function buildPUT(dataObj) {
     return {
         token  : TOKEN,
         cmd    : "PUT",
         dbName : DB_NAME,
         rel    : REL_NAME,
-        jsonStr: dataObj        // plain object — NOT stringified
+        jsonStr: dataObj
     };
 }
 
@@ -144,6 +147,8 @@ function setButtons(state) {
 function saveStudent() {
     if (!validate()) return;
 
+    showMsg("Saving...", "info");
+
     var result = executeCommand(buildPUT(getFormObj()), IML);
     console.log("SAVE:", result);
 
@@ -156,7 +161,8 @@ function saveStudent() {
         showMsg("&#10004; Student saved successfully! (Rec No: " + currentRecNo + ")", "success");
         setButtons("found");
     } else {
-        showMsg("&#10008; Save failed: " + ((result && result.message) || JSON.stringify(result)), "danger");
+        var msg = (result && result.message) ? result.message : JSON.stringify(result);
+        showMsg("&#10008; Save failed: " + msg, "danger");
     }
 }
 
@@ -167,11 +173,14 @@ function searchStudent() {
     var roll = $("#rollNo").val().trim();
     if (!roll) { alert("Enter Roll No to search!"); $("#rollNo").focus(); return; }
 
+    showMsg("Searching...", "info");
+
     var result = executeCommand(buildGET({ rollNo: roll }), IRL);
     console.log("SEARCH:", result);
 
     if (!result || result.status !== 200) {
-        showMsg("&#10008; No record found for Roll No: <b>" + roll + "</b>", "danger");
+        var msg = (result && result.message) ? result.message : "Not found";
+        showMsg("&#10008; No record found for Roll No: <b>" + roll + "</b>. " + msg, "danger");
         currentRecNo = null;
         setButtons("empty");
         return;
@@ -197,13 +206,16 @@ function updateStudent() {
     if (!validate()) return;
     if (!currentRecNo) { alert("Please Search first, then update."); return; }
 
+    showMsg("Updating...", "info");
+
     var result = executeCommand(buildUPDATE(getFormObj(), currentRecNo), IML);
     console.log("UPDATE:", result);
 
     if (result && result.status === 200) {
         showMsg("&#10004; Student updated successfully!", "success");
     } else {
-        showMsg("&#10008; Update failed: " + ((result && result.message) || JSON.stringify(result)), "danger");
+        var msg = (result && result.message) ? result.message : JSON.stringify(result);
+        showMsg("&#10008; Update failed: " + msg, "danger");
     }
 }
 
