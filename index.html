@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <title>Student Enrollment Form</title>
@@ -7,268 +7,309 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-    <script src="http://login2explore.com/jpdb/resources/js/0.0.3/jpdb-commons.js"></script>
     <style>
         .container { max-width: 700px; margin-top: 30px; }
         .required:after { content: " *"; color: red; }
         .info-text { font-size: 12px; color: #6c757d; }
-        .message { margin-top: 15px; display: none; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="panel panel-primary">
         <div class="panel-heading">
-            <h3 class="panel-title"><span class="glyphicon glyphicon-education"></span> Student Enrollment Form</h3>
+            <h3 class="panel-title">
+                <span class="glyphicon glyphicon-education"></span> Student Enrollment Form
+            </h3>
         </div>
         <div class="panel-body">
             <form id="studentForm">
+
                 <div class="form-group">
-                    <span><label for="rollNo" class="required">Roll Number (Primary Key)</label> <label id="rollNoMsg"></label></span>
-                    <input type="text" class="form-control" id="rollNo" placeholder="Enter Roll Number (e.g., S101)">
+                    <label for="rollNo" class="required">Roll Number (Primary Key)</label>
+                    <input type="text" class="form-control" id="rollNo"
+                           placeholder="Enter Roll Number (e.g., S101)">
                     <div class="info-text">Enter Roll No and press Tab — system checks existence.</div>
                 </div>
 
                 <div class="form-group">
                     <label for="fullName" class="required">Full Name</label>
-                    <input type="text" class="form-control" id="fullName" placeholder="Enter Full Name">
+                    <input type="text" class="form-control" id="fullName"
+                           placeholder="Enter Full Name" disabled>
                 </div>
 
                 <div class="form-group">
-                    <label for="class" class="required">Class</label>
-                    <input type="text" class="form-control" id="class" placeholder="e.g., 10th - A">
+                    <label for="studentClass" class="required">Class</label>
+                    <input type="text" class="form-control" id="studentClass"
+                           placeholder="e.g., 10th-A" disabled>
                 </div>
 
                 <div class="form-group">
                     <label for="birthDate" class="required">Birth Date</label>
-                    <input type="date" class="form-control" id="birthDate">
+                    <input type="date" class="form-control" id="birthDate" disabled>
                 </div>
 
                 <div class="form-group">
                     <label for="address" class="required">Address</label>
-                    <textarea class="form-control" id="address" rows="2" placeholder="House No., Street, City, PIN"></textarea>
+                    <textarea class="form-control" id="address" rows="2"
+                              placeholder="House No., Street, City, PIN" disabled></textarea>
                 </div>
 
                 <div class="form-group">
                     <label for="enrollmentDate" class="required">Enrollment Date</label>
-                    <input type="date" class="form-control" id="enrollmentDate">
+                    <input type="date" class="form-control" id="enrollmentDate" disabled>
                 </div>
 
                 <div>
-                    <button type="button" class="btn btn-success" id="saveBtn" disabled>💾 Save</button>
-                    <button type="button" class="btn btn-warning" id="updateBtn" disabled>✏️ Update</button>
-                    <button type="button" class="btn btn-default" id="resetBtn" disabled>🔄 Reset</button>
+                    <button type="button" class="btn btn-success" id="saveBtn"   disabled>&#128190; Save</button>
+                    <button type="button" class="btn btn-warning" id="updateBtn" disabled>&#9998; Update</button>
+                    <button type="button" class="btn btn-default" id="resetBtn"  disabled>&#8635; Reset</button>
                 </div>
-                <div id="messageDiv" class="message alert alert-info" style="display: block;">✅ Ready — Enter Roll Number to begin.</div>
+
+                <div id="messageDiv" class="alert alert-info" style="margin-top:15px;">
+                    &#128204; Ready — Enter Roll Number to begin.
+                </div>
+
             </form>
         </div>
     </div>
 </div>
 
 <script>
-    // ---------- JPDB Configuration ----------
-    const TOKEN = "90935188|-31949239798991463|90958760";   // Use your actual token
-    const DB_NAME = "SCHOOL-DB";
-    const REL_NAME = "STUDENT-TABLE";
-    const BASE_URL = "http://api.login2explore.com:5577";
-    const IRL_ENDPOINT = "/api/irl";
-    const IML_ENDPOINT = "/api/iml";
+/* ════════════════════════════════════════════════
+   CONFIG
+   ════════════════════════════════════════════════ */
+var TOKEN    = "90935188|-31949239798991463|90958760";
+var DB_NAME  = "SCHOOL-DB";
+var REL_NAME = "STUDENT-TABLE";
+var BASE_URL = "https://api.login2explore.com:5577";
+var IML      = "/api/iml";
+var IRL      = "/api/irl";
 
-    // DOM elements (jQuery)
-    const $rollNo = $("#rollNo");
-    const $fullName = $("#fullName");
-    const $class = $("#class");
-    const $birthDate = $("#birthDate");
-    const $address = $("#address");
-    const $enrollDate = $("#enrollmentDate");
-    const $saveBtn = $("#saveBtn");
-    const $updateBtn = $("#updateBtn");
-    const $resetBtn = $("#resetBtn");
-    const $msgDiv = $("#messageDiv");
+/* ════════════════════════════════════════════════
+   CORE — XMLHttpRequest (works on GitHub Pages HTTPS)
+   ════════════════════════════════════════════════ */
+function executeCommand(reqObj, endpoint) {
+    var result = null;
+    try {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", BASE_URL + endpoint, false);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send(JSON.stringify(reqObj));
+        if (xhr.responseText) {
+            result = JSON.parse(xhr.responseText);
+        }
+    } catch(e) {
+        result = { status: 0, message: e.message };
+    }
+    return result;
+}
 
-    // Helper: show message
-    function showMessage(text, type) {
-        $msgDiv.removeClass("alert-info alert-success alert-danger").addClass("alert-" + type);
-        $msgDiv.html(`<span class="glyphicon glyphicon-${type === 'danger' ? 'exclamation-sign' : (type === 'success' ? 'ok-sign' : 'info-sign')}"></span> ${text}`);
-        $msgDiv.show();
-        if (type !== 'danger') {
-            setTimeout(() => $msgDiv.fadeOut(), 4000);
-        } else {
-            setTimeout(() => $msgDiv.fadeOut(), 6000);
+/* ════════════════════════════════════════════════
+   BUILD REQUESTS
+   ════════════════════════════════════════════════ */
+function buildGET(rollNo) {
+    return {
+        token  : TOKEN,
+        cmd    : "GET_BY_KEY",
+        dbName : DB_NAME,
+        rel    : REL_NAME,
+        jsonStr: { rollNo: rollNo }
+    };
+}
+
+function buildPUT(dataObj) {
+    return {
+        token  : TOKEN,
+        cmd    : "PUT",
+        dbName : DB_NAME,
+        rel    : REL_NAME,
+        jsonStr: dataObj
+    };
+}
+
+function buildUPDATE(dataObj, recNo) {
+    return {
+        token  : TOKEN,
+        cmd    : "UPDATE",
+        dbName : DB_NAME,
+        rel    : REL_NAME,
+        recNo  : recNo,
+        jsonStr: dataObj
+    };
+}
+
+/* ════════════════════════════════════════════════
+   FORM HELPERS
+   ════════════════════════════════════════════════ */
+function getFormObj() {
+    return {
+        rollNo         : $("#rollNo").val().trim(),
+        fullName       : $("#fullName").val().trim(),
+        "class"        : $("#studentClass").val().trim(),
+        birthDate      : $("#birthDate").val(),
+        address        : $("#address").val().trim(),
+        enrollmentDate : $("#enrollmentDate").val()
+    };
+}
+
+function fillForm(rec) {
+    $("#fullName").val(rec.fullName             || "");
+    $("#studentClass").val(rec["class"]         || "");
+    $("#birthDate").val(rec.birthDate           || "");
+    $("#address").val(rec.address               || "");
+    $("#enrollmentDate").val(rec.enrollmentDate || "");
+}
+
+function clearFields() {
+    $("#fullName, #studentClass, #birthDate, #address, #enrollmentDate").val("");
+}
+
+function setFieldsDisabled(flag) {
+    $("#fullName, #studentClass, #birthDate, #address, #enrollmentDate").prop("disabled", flag);
+}
+
+/* ════════════════════════════════════════════════
+   VALIDATION
+   ════════════════════════════════════════════════ */
+function validate() {
+    var fields = [
+        { id:"rollNo",         label:"Roll Number" },
+        { id:"fullName",       label:"Full Name" },
+        { id:"studentClass",   label:"Class" },
+        { id:"birthDate",      label:"Birth Date" },
+        { id:"address",        label:"Address" },
+        { id:"enrollmentDate", label:"Enrollment Date" }
+    ];
+    for (var i = 0; i < fields.length; i++) {
+        if ($("#" + fields[i].id).val().trim() === "") {
+            showMsg("&#10060; " + fields[i].label + " is required!", "danger");
+            $("#" + fields[i].id).focus();
+            return false;
         }
     }
+    return true;
+}
 
-    // Reset to initial state (only Roll No enabled)
-    function resetToInitial() {
-        $rollNo.val("");
-        $fullName.val("").prop("disabled", true);
-        $class.val("").prop("disabled", true);
-        $birthDate.val("").prop("disabled", true);
-        $address.val("").prop("disabled", true);
-        $enrollDate.val("").prop("disabled", true);
-        $rollNo.prop("disabled", false);
-        $saveBtn.prop("disabled", true);
-        $updateBtn.prop("disabled", true);
-        $resetBtn.prop("disabled", true);
-        $rollNo.focus();
-        showMessage("📌 Form reset. Enter Roll Number to check existence.", "info");
-    }
+/* ════════════════════════════════════════════════
+   UI HELPERS
+   ════════════════════════════════════════════════ */
+function showMsg(text, type) {
+    $("#messageDiv")
+        .removeClass("alert-info alert-success alert-danger alert-warning")
+        .addClass("alert-" + (type || "info"))
+        .html(text)
+        .show();
+}
 
-    // Enable fields for Save (new record)
-    function enableSaveMode() {
-        $fullName.prop("disabled", false);
-        $class.prop("disabled", false);
-        $birthDate.prop("disabled", false);
-        $address.prop("disabled", false);
-        $enrollDate.prop("disabled", false);
-        $rollNo.prop("disabled", false);
-        $saveBtn.prop("disabled", false);
-        $updateBtn.prop("disabled", true);
-        $resetBtn.prop("disabled", false);
-        $fullName.focus();
-        showMessage("🆕 New Roll Number – fill all details and click Save.", "info");
-    }
+var currentRecNo = null;
 
-    // Enable fields for Update (existing record) – Roll No disabled
-    function enableUpdateMode(data) {
-        $fullName.val(data.fullName || "").prop("disabled", false);
-        $class.val(data.class || "").prop("disabled", false);
-        $birthDate.val(data.birthDate || "").prop("disabled", false);
-        $address.val(data.address || "").prop("disabled", false);
-        $enrollDate.val(data.enrollmentDate || "").prop("disabled", false);
-        $rollNo.prop("disabled", true);
-        $saveBtn.prop("disabled", true);
-        $updateBtn.prop("disabled", false);
-        $resetBtn.prop("disabled", false);
-        $fullName.focus();
-        showMessage("📖 Record found – modify and click Update.", "info");
-    }
+/* ════════════════════════════════════════════════
+   RESET
+   ════════════════════════════════════════════════ */
+function resetToInitial() {
+    $("#rollNo").val("").prop("disabled", false);
+    clearFields();
+    setFieldsDisabled(true);
+    $("#saveBtn, #updateBtn, #resetBtn").prop("disabled", true);
+    currentRecNo = null;
+    showMsg("&#128204; Form reset. Enter Roll Number to begin.", "info");
+    $("#rollNo").focus();
+}
 
-    // Validate all fields are non‑empty
-    function validateAllFields() {
-        if ($rollNo.val().trim() === "") { showMessage("❌ Roll Number required", "danger"); $rollNo.focus(); return false; }
-        if ($fullName.val().trim() === "") { showMessage("❌ Full Name required", "danger"); $fullName.focus(); return false; }
-        if ($class.val().trim() === "") { showMessage("❌ Class required", "danger"); $class.focus(); return false; }
-        if ($birthDate.val() === "") { showMessage("❌ Birth Date required", "danger"); $birthDate.focus(); return false; }
-        if ($address.val().trim() === "") { showMessage("❌ Address required", "danger"); $address.focus(); return false; }
-        if ($enrollDate.val() === "") { showMessage("❌ Enrollment Date required", "danger"); $enrollDate.focus(); return false; }
-        return true;
-    }
+/* ════════════════════════════════════════════════
+   ON ROLL NO BLUR — auto check if record exists
+   ════════════════════════════════════════════════ */
+function onRollNoBlur() {
+    var roll = $("#rollNo").val().trim();
+    if (roll === "") { resetToInitial(); return; }
 
-    // Build student object from form
-    function getStudentObject() {
-        return {
-            rollNo: $rollNo.val().trim(),
-            fullName: $fullName.val().trim(),
-            class: $class.val().trim(),
-            birthDate: $birthDate.val(),
-            address: $address.val().trim(),
-            enrollmentDate: $enrollDate.val()
-        };
-    }
+    showMsg("&#128269; Checking Roll No: <b>" + roll + "</b> ...", "info");
 
-    // Fetch student by primary key (GET_BY_KEY)
-    function fetchStudentByRollNo(roll) {
-        let getReq = createGETRequest(TOKEN, DB_NAME, REL_NAME, roll);
-        let response = null;
-        $.ajaxSetup({ async: false });
+    var result = executeCommand(buildGET(roll), IRL);
+    console.log("SEARCH:", result);
+
+    if (result && result.status === 200) {
+        // Record EXISTS → Update mode
         try {
-            response = executeCommandAtGivenBaseUrl(getReq, BASE_URL, IRL_ENDPOINT);
+            var d   = (typeof result.data === "string") ? JSON.parse(result.data) : result.data;
+            var rec = d.record || d;
+            currentRecNo = d.rec_no || null;
+            fillForm(rec);
         } catch(e) { console.error(e); }
-        $.ajaxSetup({ async: true });
-        return response;
+
+        setFieldsDisabled(false);
+        $("#rollNo").prop("disabled", true);
+        $("#saveBtn").prop("disabled", true);
+        $("#updateBtn").prop("disabled", false);
+        $("#resetBtn").prop("disabled", false);
+        showMsg("&#128216; Record found — modify fields and click <b>Update</b>.", "info");
+        $("#fullName").focus();
+
+    } else {
+        // Record NOT EXISTS → Save mode
+        currentRecNo = null;
+        clearFields();
+        setFieldsDisabled(false);
+        $("#saveBtn").prop("disabled", false);
+        $("#updateBtn").prop("disabled", true);
+        $("#resetBtn").prop("disabled", false);
+        showMsg("&#127381; New Roll Number — fill all details and click <b>Save</b>.", "info");
+        $("#fullName").focus();
     }
+}
 
-    // Execute IML command (PUT or UPDATE) – jsonStr must be a string
-    function executeIMLCommand(cmd, jsonStrData) {
-        let requestObj = {
-            token: TOKEN,
-            cmd: cmd,
-            dbName: DB_NAME,
-            rel: REL_NAME,
-            jsonStr: jsonStrData   // already a string
-        };
-        let requestString = JSON.stringify(requestObj);
-        let result = null;
-        $.ajaxSetup({ async: false });
-        try {
-            result = executeCommandAtGivenBaseUrl(requestString, BASE_URL, IML_ENDPOINT);
-        } catch(e) { console.error(e); }
-        $.ajaxSetup({ async: true });
-        return result;
+/* ════════════════════════════════════════════════
+   SAVE
+   ════════════════════════════════════════════════ */
+function saveStudent() {
+    if (!validate()) return;
+    showMsg("&#9203; Saving...", "info");
+
+    var result = executeCommand(buildPUT(getFormObj()), IML);
+    console.log("SAVE:", result);
+
+    if (result && result.status === 200) {
+        showMsg("&#10004; Student saved successfully!", "success");
+        setTimeout(resetToInitial, 1500);
+    } else {
+        showMsg("&#10008; Save failed: " + ((result && result.message) || JSON.stringify(result)), "danger");
     }
+}
 
-    // ----- Core logic: on Roll No blur -----
-    function onRollNoBlur() {
-        let rollVal = $rollNo.val().trim();
-        if (rollVal === "") { resetToInitial(); return; }
-        showMessage(`🔍 Checking Roll No: ${rollVal} ...`, "info");
-        let record = fetchStudentByRollNo(rollVal);
-        let exists = false, studentData = null;
-        if (record && record.status === "200" && record.data && Object.keys(record.data).length > 0) {
-            exists = true;
-            studentData = record.data;
-        }
-        if (exists && studentData) {
-            enableUpdateMode(studentData);
-        } else {
-            $fullName.val(""); $class.val(""); $birthDate.val(""); $address.val(""); $enrollDate.val("");
-            enableSaveMode();
-        }
+/* ════════════════════════════════════════════════
+   UPDATE
+   ════════════════════════════════════════════════ */
+function updateStudent() {
+    if (!validate()) return;
+    if (!currentRecNo) { showMsg("&#9888; No record loaded. Search first.", "warning"); return; }
+    showMsg("&#9203; Updating...", "info");
+
+    var result = executeCommand(buildUPDATE(getFormObj(), currentRecNo), IML);
+    console.log("UPDATE:", result);
+
+    if (result && result.status === 200) {
+        showMsg("&#10004; Student updated successfully!", "success");
+        setTimeout(resetToInitial, 1500);
+    } else {
+        showMsg("&#10008; Update failed: " + ((result && result.message) || JSON.stringify(result)), "danger");
     }
+}
 
-    // ----- Save (PUT) -----
-    function saveStudent() {
-        if (!validateAllFields()) return;
-        let rollVal = $rollNo.val().trim();
-        let existing = fetchStudentByRollNo(rollVal);
-        if (existing && existing.status === "200" && existing.data && Object.keys(existing.data).length > 0) {
-            showMessage("⚠️ Roll Number already exists! Use Update instead.", "danger");
-            return;
-        }
-        let studentObj = getStudentObject();
-        let jsonStrData = JSON.stringify(studentObj);
-        let result = executeIMLCommand("PUT", jsonStrData);
-        if (result && result.status === "200") {
-            showMessage(`✅ Student ${rollVal} saved successfully!`, "success");
-            resetToInitial();
-        } else {
-            showMessage(`❌ Save failed: ${result?.message || "Unknown error"}`, "danger");
-        }
-    }
+/* ════════════════════════════════════════════════
+   EVENT BINDING
+   ════════════════════════════════════════════════ */
+$(document).ready(function () {
+    resetToInitial();
 
-    // ----- Update (UPDATE) -----
-    function updateStudent() {
-        if (!validateAllFields()) return;
-        let rollVal = $rollNo.val().trim();
-        let existing = fetchStudentByRollNo(rollVal);
-        if (!existing || existing.status !== "200" || !existing.data) {
-            showMessage("⚠️ Record not found. Cannot update.", "danger");
-            resetToInitial();
-            return;
-        }
-        let studentObj = getStudentObject();
-        let jsonStrData = JSON.stringify(studentObj);
-        let result = executeIMLCommand("UPDATE", jsonStrData);
-        if (result && result.status === "200") {
-            showMessage(`✏️ Student ${rollVal} updated successfully!`, "success");
-            resetToInitial();
-        } else {
-            showMessage(`❌ Update failed: ${result?.message || "Error"}`, "danger");
-        }
-    }
-
-    // ----- Event binding -----
-    $rollNo.on("blur", onRollNoBlur);
-    $rollNo.on("keypress", function(e) { if (e.which === 13) $rollNo.blur(); });
-    $saveBtn.on("click", saveStudent);
-    $updateBtn.on("click", updateStudent);
-    $resetBtn.on("click", resetToInitial);
-
-    // Initialise on page load
-    $(document).ready(function() {
-        resetToInitial();
+    $("#rollNo").on("blur", onRollNoBlur);
+    $("#rollNo").on("keypress", function(e) {
+        if (e.which === 13) $(this).blur();
     });
+    $("#saveBtn").on("click",   saveStudent);
+    $("#updateBtn").on("click", updateStudent);
+    $("#resetBtn").on("click",  resetToInitial);
+});
 </script>
 </body>
+</html>
 </html>
